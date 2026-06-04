@@ -1,0 +1,27 @@
+stages:
+  - review
+
+ai-code-review:
+  stage: review
+  tags:
+    - code_review
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^release\/test\//'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
+  variables:
+    GIT_STRATEGY: none
+  before_script:
+    - pip3 install requests PySocks --quiet
+  script:
+    - echo "=== AI Code Review Job 开始 ==="
+    - echo "Pipeline Source - $CI_PIPELINE_SOURCE"
+    - echo "Project ID - $CI_PROJECT_ID"
+    - echo "MR IID - $CI_MERGE_REQUEST_IID"
+    - echo "Source Branch - $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+    - echo "Target Branch - $CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    - echo "Server URL - $CI_SERVER_URL"
+    - echo "==========================="
+    - python3 /home/ytyfsu/apps/ai_review.py
+  allow_failure: false
