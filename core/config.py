@@ -9,6 +9,8 @@ class Config:
     """配置管理：从环境变量读取所有配置"""
 
     DEFAULT_SCORE_THRESHOLD = 7
+    DEFAULT_AI_REQUEST_TIMEOUT = 600
+    DEFAULT_AI_MAX_RETRIES = 3
 
     def __init__(self):
         self.GITLAB_URL = os.environ["CI_SERVER_URL"] + "/api/v4"
@@ -27,6 +29,12 @@ class Config:
         self.MAX_CONTEXT_CHARS = int(os.environ.get("MAX_CONTEXT_CHARS", "50000"))
         self.SCORE_THRESHOLD = self._parse_score_threshold()
         self.REVIEW_SCOPE = self._parse_review_scope()
+        self.AI_REQUEST_TIMEOUT = self._parse_positive_int(
+            "AI_REQUEST_TIMEOUT_SECONDS", self.DEFAULT_AI_REQUEST_TIMEOUT
+        )
+        self.AI_MAX_RETRIES = self._parse_positive_int(
+            "AI_MAX_RETRIES", self.DEFAULT_AI_MAX_RETRIES
+        )
         proxy = os.environ.get("OPENAI_PROXY", "")
         self.OPENAI_PROXIES = {"http": proxy, "https": proxy} if proxy else None
         fallback = os.environ.get("OPENAI_PROXY_FALLBACK", "")
@@ -81,3 +89,16 @@ class Config:
             print(f"WARNING: AI_REVIEW_SCOPE={scope!r} 无效，使用默认值 'full'")
             return "full"
         return scope
+
+    def _parse_positive_int(self, env_name: str, default: int) -> int:
+        raw = os.environ.get(env_name, "").strip()
+        if not raw:
+            return default
+        try:
+            value = int(raw)
+            if value > 0:
+                return value
+            print(f"WARNING: {env_name}={raw!r} 必须大于 0，使用默认值 {default}")
+        except ValueError:
+            print(f"WARNING: {env_name}={raw!r} 不是有效整数，使用默认值 {default}")
+        return default

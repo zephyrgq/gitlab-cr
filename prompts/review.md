@@ -42,6 +42,8 @@
 
 - `+` 开头：新增行——**只审查这些行**
 - `-` 开头：删除行——**不要对删除行报问题**
+- 源码上下文只能用于理解调用关系、类型来源和业务语义，**不能把源码上下文中的非 diff 行作为问题 location**
+- 每个 issue 的 `location` 必须指向本次 diff 中 `+` 开头的新增行；如果问题无法落到新增行，就不要报告该问题
 - 只报告有把握的问题，必须有明确证据
 - 不要为了凑数量输出
 
@@ -50,26 +52,27 @@
 只输出 JSON，不要额外说明：
 
 {
-    "summary": "综合审查总结",
-    "security": {
-        "issues": [{"title": "", "location": "文件路径:行号", "description": "", "suggestion": "", "severity": "critical"}],
-        "score": 10
-    },
-    "logic": {
-        "issues": [{"title": "", "location": "文件路径:行号", "description": "", "suggestion": "", "severity": "critical"}],
-        "score": 10
-    },
-    "quality": {
-        "issues": [{"title": "", "location": "文件路径:行号", "description": "", "suggestion": "", "severity": "warning"}],
-        "score": 10
-    },
-    "blocking_issues": [],
-    "non_blocking_issues": [],
-    "other_suggestions": [],
-    "score": 10
+"summary": "综合审查总结",
+"security": {
+"issues": [{"title": "", "location": "文件路径:行号", "description": "", "suggestion": "", "severity": "critical"}],
+"score": 10
+},
+"logic": {
+"issues": [{"title": "", "location": "文件路径:行号", "description": "", "suggestion": "", "severity": "critical"}],
+"score": 10
+},
+"quality": {
+"issues": [{"title": "", "location": "文件路径:行号", "description": "", "suggestion": "", "severity": "warning"}],
+"score": 10
+},
+"blocking_issues": [],
+"non_blocking_issues": [],
+"other_suggestions": [],
+"score": 10
 }
 
 要求：
+
 - blocking_issues = 所有 severity 为 "critical" 的 issue
 - non_blocking_issues = 所有 severity 为 "warning" 的 issue
 - other_suggestions = 质量维度的优化建议

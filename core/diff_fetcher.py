@@ -78,6 +78,8 @@ class DiffFetcher:
                     if self._should_include(entry):
                         all_diffs.append({
                             "file_path": entry.get("new_path", "") or entry.get("old_path", ""),
+                            "old_path": entry.get("old_path", "") or entry.get("new_path", ""),
+                            "new_path": entry.get("new_path", "") or entry.get("old_path", ""),
                             "diff": entry.get("diff", ""),
                             "new_file": entry.get("new_file", False),
                             "deleted_file": entry.get("deleted_file", False),
@@ -129,6 +131,8 @@ class DiffFetcher:
             if self._should_include(entry):
                 incremental.append({
                     "file_path": entry.get("new_path", "") or entry.get("old_path", ""),
+                    "old_path": entry.get("old_path", "") or entry.get("new_path", ""),
+                    "new_path": entry.get("new_path", "") or entry.get("old_path", ""),
                     "diff": entry.get("diff", ""),
                     "new_file": entry.get("new_file", False),
                     "deleted_file": entry.get("deleted_file", False),

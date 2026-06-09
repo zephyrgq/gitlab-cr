@@ -6,6 +6,8 @@ import re
 import sys
 from typing import Optional
 
+import requests
+
 from core.gitlab_api import GitLabAPI
 
 
@@ -151,10 +153,93 @@ def truncate_text(text: str, max_chars: int, suffix: str = "\n...(truncated)") -
 class MRDiscussionWriter:
     """在 MR diff 的指定行上创建 Discussion（行级评论）"""
 
-    def __init__(self, api: GitLabAPI, project_id: str):
+    HUNK_HEADER_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+
+    def __init__(self, api: GitLabAPI, project_id: str, diffs=None):
         self.api = api
         self.project_id = project_id
         self._shas = None
+        self._diff_refs = self._build_diff_refs(diffs or [])
+
+    @classmethod
+    def _build_diff_position_map(cls, diff_text: str):
+        positions = {}
+        old_line = None
+        new_line = None
+
+        for raw_line in (diff_text or "").splitlines():
+            header_match = cls.HUNK_HEADER_RE.match(raw_line)
+            if header_match:
+                old_line = int(header_match.group(1))
+                new_line = int(header_match.group(3))
+                continue
+
+            if old_line is None or new_line is None:
+                continue
+            if raw_line.startswith("\\ No newline at end of file"):
+                continue
+            if raw_line.startswith("+"):
+                positions[new_line] = {"new_line": new_line}
+                new_line += 1
+                continue
+            if raw_line.startswith("-"):
+                old_line += 1
+                continue
+
+            old_line += 1
+            new_line += 1
+
+        return positions
+
+    @classmethod
+    def _build_diff_refs(cls, diffs):
+        refs = {}
+        for entry in diffs:
+            if not isinstance(entry, dict):
+                continue
+            new_path = str(entry.get("new_path") or entry.get("file_path") or "").strip()
+            old_path = str(entry.get("old_path") or new_path).strip()
+            file_path = str(entry.get("file_path") or new_path or old_path).strip()
+            if not file_path:
+                continue
+            ref = {
+                "old_path": old_path or file_path,
+                "new_path": new_path or file_path,
+                "positions": cls._build_diff_position_map(entry.get("diff", "")),
+            }
+            for alias in {file_path, old_path, new_path}:
+                alias = str(alias or "").strip()
+                if alias:
+                    refs[alias] = ref
+        return refs
+
+    def _build_diff_position(self, file_path: str, line: int):
+        ref = self._diff_refs.get((file_path or "").strip())
+        if not ref:
+            return None
+        line_position = ref["positions"].get(line)
+        if not line_position:
+            return None
+        position = {
+            "old_path": ref["old_path"],
+            "new_path": ref["new_path"],
+        }
+        position.update(line_position)
+        return position
+
+    def is_diff_position(self, file_path: str, line: int) -> bool:
+        return self._build_diff_position(file_path, line) is not None
+
+    @staticmethod
+    def _format_body(severity: str, title: str, description: str = "", suggestion: str = "", location: str = ""):
+        body_parts = [f"**[{severity.upper()}]** {title}"]
+        if location:
+            body_parts.append(f"> 位置: {location}")
+        if description:
+            body_parts.append(description)
+        if suggestion:
+            body_parts.append(f"> 💡 {suggestion}")
+        return "\n\n".join(body_parts)
 
     def _get_diff_shas(self, mr_iid: str):
         """从 MR versions API 获取 base_sha / start_sha / head_sha"""
@@ -171,29 +256,36 @@ class MRDiscussionWriter:
     def post_comment(self, mr_iid: str, file_path: str, line: int, severity: str,
                      title: str, description: str = "", suggestion: str = ""):
         """在指定文件的指定行上创建一个 Discussion"""
-        base_sha, start_sha, head_sha = self._get_diff_shas(mr_iid)
+        location = f"{file_path}:{line}"
+        body = self._format_body(severity, title, description, suggestion)
         url = f"/projects/{self.project_id}/merge_requests/{mr_iid}/discussions"
+        position = self._build_diff_position(file_path, line)
 
-        body_parts = [f"**[{severity.upper()}]** {title}"]
-        if description:
-            body_parts.append(description)
-        if suggestion:
-            body_parts.append(f"> 💡 {suggestion}")
+        if not position:
+            print("INFO: 跳过非 diff 行问题，不发评论: %s" % location)
+            return False
 
+        base_sha, start_sha, head_sha = self._get_diff_shas(mr_iid)
         payload = {
-            "body": "\n\n".join(body_parts),
+            "body": body,
             "position": {
                 "base_sha": base_sha,
                 "start_sha": start_sha,
                 "head_sha": head_sha,
                 "position_type": "text",
-                "new_path": file_path,
-                "new_line": line,
-                "old_path": file_path,
-                "old_line": None,
+                **position,
             },
         }
-        self.api.post(url, json_data=payload)
+
+        try:
+            self.api.post(url, json_data=payload)
+        except requests.exceptions.HTTPError as exc:
+            response = getattr(exc, "response", None)
+            if response is None or response.status_code != 400:
+                raise
+            print("WARNING: GitLab 拒绝 diff 行级评论，已跳过 (%s): %s" % (location, exc))
+            return False
+        return True
 
 
 class MRCommentWriter:
@@ -297,7 +389,7 @@ class MRCommentWriter:
         previous_keys = set(previous_map.keys())
         return {
             "added": [current_map[key] for key in sorted(current_keys - previous_keys)],
-            "resolved": [current_map[key] for key in sorted(previous_keys - current_keys)],
+            "resolved": [previous_map[key] for key in sorted(previous_keys - current_keys)],
             "persisting": [current_map[key] for key in sorted(current_keys & previous_keys)],
         }
 

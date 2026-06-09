@@ -75,6 +75,8 @@ class ReviewAgent(BaseAgent):
         if not self.diffs:
             return
 
+        discussion_writer = MRDiscussionWriter(self.gitlab, self.config.PROJECT_ID, self.diffs)
+        parsed = self._filter_to_diff_issues(parsed, discussion_writer)
         score = parsed.get("score", 0)
         threshold = getattr(self.config, 'SCORE_THRESHOLD', 7)
         print("INFO: 最终评分: %s/10，阈值: %s" % (score, threshold))
@@ -84,7 +86,6 @@ class ReviewAgent(BaseAgent):
         ))
 
         # 1. 发逐行评论
-        discussion_writer = MRDiscussionWriter(self.gitlab, self.config.PROJECT_ID)
         for issue in parsed.get("blocking_issues", []):
             file_path, line = parse_location(issue.get("location", ""))
             if file_path and line:
@@ -124,6 +125,23 @@ class ReviewAgent(BaseAgent):
             score_status = "❌ 评分未通过（%s/10 < 阈值 %s），需要人工审查后手动合并" % (score, threshold)
             writer.write(self.config.MR_IID, parsed, score_status=score_status)
             sys.exit(1)
+
+    def _filter_to_diff_issues(self, parsed, discussion_writer):
+        filtered = dict(parsed)
+        dropped = []
+        for field in ("blocking_issues", "non_blocking_issues"):
+            kept = []
+            for issue in parsed.get(field, []) or []:
+                file_path, line = parse_location(issue.get("location", ""))
+                if file_path and line and discussion_writer.is_diff_position(file_path, line):
+                    kept.append(issue)
+                else:
+                    dropped.append(issue)
+            filtered[field] = kept
+
+        if dropped:
+            print("INFO: 已丢弃 %s 条不在 MR diff 中的问题" % len(dropped))
+        return filtered
 
     def _merge_mr(self, mr_iid: str):
         url = "/projects/%s/merge_requests/%s/merge" % (self.config.PROJECT_ID, mr_iid)

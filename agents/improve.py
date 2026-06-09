@@ -26,7 +26,8 @@ class ImproveAgent(BaseAgent):
         if not self.diffs:
             return
 
-        non_blocking = parsed.get("non_blocking_issues", [])
+        discussion_writer = MRDiscussionWriter(self.gitlab, self.config.PROJECT_ID, self.diffs)
+        non_blocking = self._filter_to_diff_issues(parsed.get("non_blocking_issues", []), discussion_writer)
         suggestions = parsed.get("other_suggestions", [])
 
         if not non_blocking and not suggestions:
@@ -34,7 +35,6 @@ class ImproveAgent(BaseAgent):
             return
 
         # 发逐行建议评论
-        discussion_writer = MRDiscussionWriter(self.gitlab, self.config.PROJECT_ID)
         for issue in non_blocking:
             file_path, line = parse_location(issue.get("location", ""))
             if file_path and line:
@@ -50,3 +50,17 @@ class ImproveAgent(BaseAgent):
                     print(f"WARNING: 行级建议评论失败 ({issue['title']}): {e}")
 
         print(f"INFO: improve 完成，发现 {len(non_blocking)} 条建议")
+
+    @staticmethod
+    def _filter_to_diff_issues(issues, discussion_writer):
+        kept = []
+        dropped = 0
+        for issue in issues or []:
+            file_path, line = parse_location(issue.get("location", ""))
+            if file_path and line and discussion_writer.is_diff_position(file_path, line):
+                kept.append(issue)
+            else:
+                dropped += 1
+        if dropped:
+            print(f"INFO: improve 已丢弃 {dropped} 条不在 MR diff 中的建议")
+        return kept

@@ -32,12 +32,15 @@ gitlab-cr/
 
 在 GitLab CI/CD Settings → Variables 中设置：
 
-| 变量 | 必需 | 默认值 | 说明 |
-|---|---|---|---|
-| `GITLAB_TOKEN` | ✅ | - | GitLab 访问令牌（需 api 权限） |
-| `DASHSCOPE_API_KEY` | ✅ | - | 阿里百炼 API Key |
-| `AI_SERVICE` | | dashscope | openai / dashscope / zhipu |
-| `AI_REVIEW_SCORE_THRESHOLD` | | 7 | 1-10，低于此值阻止合并 |
+| 变量                         | 必需 | 默认值                                              | 说明                           |
+| ---------------------------- | ---- | --------------------------------------------------- | ------------------------------ |
+| `GITLAB_TOKEN`               | ✅   | -                                                   | GitLab 访问令牌（需 api 权限） |
+| `DASHSCOPE_API_KEY`          | ✅   | -                                                   | 阿里百炼 API Key               |
+| `AI_SERVICE`                 |      | dashscope                                           | openai / dashscope / zhipu     |
+| `AI_REVIEW_SCORE_THRESHOLD`  |      | 7                                                   | 1-10，低于此值阻止合并         |
+| `AI_REQUEST_TIMEOUT_SECONDS` |      | 600                                                 | 单次 LLM HTTP 请求超时（秒）   |
+| `AI_MAX_RETRIES`             |      | 3                                                   | LLM 请求最大重试次数           |
+| `AI_AGENT_TIMEOUT_SECONDS`   |      | `AI_REQUEST_TIMEOUT_SECONDS * AI_MAX_RETRIES + 300` | 单个 Agent 进程总超时（秒）    |
 
 其他可选变量见 `core/config.py`。
 
@@ -72,11 +75,11 @@ python main.py improve
 
 ## Agent 说明
 
-| Agent | 功能 | 阻断 | 运行方式 |
-|---|---|---|---|
-| review | 代码审查，报告问题并评分 | 是 | `main.py review` |
-| describe | 自动生成 MR 标题和描述 | 否 | `main.py describe` |
-| improve | 代码质量改进建议 | 否 | `main.py improve` |
+| Agent    | 功能                     | 阻断 | 运行方式           |
+| -------- | ------------------------ | ---- | ------------------ |
+| review   | 代码审查，报告问题并评分 | 是   | `main.py review`   |
+| describe | 自动生成 MR 标题和描述   | 否   | `main.py describe` |
+| improve  | 代码质量改进建议         | 否   | `main.py improve`  |
 
 三个 Agent 在 CI 中并行运行（通过 `ai_review.py` 编排）。
 
@@ -84,11 +87,11 @@ python main.py improve
 
 ### 模型选择
 
-| AI_SERVICE | API Key 变量 | 默认模型 |
-|---|---|---|
-| dashscope | DASHSCOPE_API_KEY | glm-5 |
-| openai | OPENAI_API_KEY | gpt-4o |
-| zhipu | ZHIPU_API_KEY | GLM-5.1 |
+| AI_SERVICE | API Key 变量      | 默认模型 |
+| ---------- | ----------------- | -------- |
+| dashscope  | DASHSCOPE_API_KEY | glm-5    |
+| openai     | OPENAI_API_KEY    | gpt-4o   |
+| zhipu      | ZHIPU_API_KEY     | GLM-5.1  |
 
 ### 审查范围
 
