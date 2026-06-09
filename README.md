@@ -32,19 +32,19 @@ gitlab-cr/
 
 在 GitLab CI/CD Settings → Variables 中设置：
 
-| 变量                               | 必需 | 默认值                                              | 说明                                   |
-| ---------------------------------- | ---- | --------------------------------------------------- | -------------------------------------- |
-| `GITLAB_TOKEN`                     | ✅   | -                                                   | GitLab 访问令牌（需 api 权限）         |
-| `DASHSCOPE_API_KEY`                | ✅   | -                                                   | 阿里百炼 API Key                       |
-| `AI_SERVICE`                       |      | dashscope                                           | openai / dashscope / zhipu             |
-| `AI_REVIEW_SCORE_THRESHOLD`        |      | 7                                                   | 1-10，低于此值阻止合并                 |
-| `AI_REQUEST_TIMEOUT_SECONDS`       |      | 300                                                 | 单次 LLM HTTP 请求超时（秒）           |
-| `AI_MAX_RETRIES`                   |      | 1                                                   | LLM 请求最大重试次数                   |
-| `AI_AGENT_TIMEOUT_SECONDS`         |      | `AI_REQUEST_TIMEOUT_SECONDS * AI_MAX_RETRIES + 300` | 单个 Agent 进程总超时（秒）            |
-| `AI_REVIEW_AGENTS`                 |      | `review,describe,improve`                           | CI 执行的 Agent，逗号分隔；如 `review` |
-| `AI_SOURCE_CONTEXT_PADDING`        |      | 8                                                   | review 源码上下文前后行数              |
-| `AI_SOURCE_CONTEXT_LINES_PER_FILE` |      | 80                                                  | 单文件最多源码上下文行数               |
-| `AI_SOURCE_CONTEXT_FILES`          |      | 8                                                   | 最多补充源码上下文的文件数             |
+| 变量                               | 必需 | 默认值                                             | 说明                                   |
+| ---------------------------------- | ---- | -------------------------------------------------- | -------------------------------------- |
+| `GITLAB_TOKEN`                     | ✅   | -                                                  | GitLab 访问令牌（需 api 权限）         |
+| `DASHSCOPE_API_KEY`                | ✅   | -                                                  | 阿里百炼 API Key                       |
+| `AI_SERVICE`                       |      | dashscope                                          | openai / dashscope / zhipu             |
+| `AI_REVIEW_SCORE_THRESHOLD`        |      | 7                                                  | 1-10，低于此值阻止合并                 |
+| `AI_REQUEST_TIMEOUT_SECONDS`       |      | 480                                                | 单次 LLM HTTP 请求超时（秒）           |
+| `AI_MAX_RETRIES`                   |      | 1                                                  | LLM 请求最大重试次数                   |
+| `AI_AGENT_TIMEOUT_SECONDS`         |      | `AI_REQUEST_TIMEOUT_SECONDS * AI_MAX_RETRIES + 60` | 单个 Agent 进程总超时（秒）            |
+| `AI_REVIEW_AGENTS`                 |      | `review,describe,improve`                          | CI 执行的 Agent，逗号分隔；如 `review` |
+| `AI_SOURCE_CONTEXT_PADDING`        |      | 8                                                  | review 源码上下文前后行数              |
+| `AI_SOURCE_CONTEXT_LINES_PER_FILE` |      | 80                                                 | 单文件最多源码上下文行数               |
+| `AI_SOURCE_CONTEXT_FILES`          |      | 8                                                  | 最多补充源码上下文的文件数             |
 
 其他可选变量见 `core/config.py`。
 

@@ -34,9 +34,9 @@ def _parse_positive_int(env_name: str, default: int) -> int:
 
 
 def _get_agent_timeout_seconds() -> int:
-    request_timeout = _parse_positive_int("AI_REQUEST_TIMEOUT_SECONDS", 600)
+    request_timeout = _parse_positive_int("AI_REQUEST_TIMEOUT_SECONDS", 480)
     max_retries = _parse_positive_int("AI_MAX_RETRIES", 1)
-    default_timeout = request_timeout * max_retries + 300
+    default_timeout = request_timeout * max_retries + 60
     return _parse_positive_int("AI_AGENT_TIMEOUT_SECONDS", default_timeout)
 
 

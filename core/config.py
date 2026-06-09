@@ -9,7 +9,7 @@ class Config:
     """配置管理：从环境变量读取所有配置"""
 
     DEFAULT_SCORE_THRESHOLD = 7
-    DEFAULT_AI_REQUEST_TIMEOUT = 300
+    DEFAULT_AI_REQUEST_TIMEOUT = 480
     DEFAULT_AI_MAX_RETRIES = 1
 
     def __init__(self):

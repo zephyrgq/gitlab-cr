@@ -22,6 +22,16 @@ class AIClientBase:
         return getattr(self.config, "AI_REQUEST_TIMEOUT", 600)
 
     @staticmethod
+    def _log_http_failure(service_name, status_code, attempt, max_retries):
+        action = "准备重试" if attempt < max_retries else "不再重试"
+        print(f"WARNING: {service_name} API 请求失败（HTTP {status_code}），第 {attempt}/{max_retries} 次尝试失败，{action}")
+
+    @staticmethod
+    def _log_exception_failure(service_name, error, attempt, max_retries):
+        action = "准备重试" if attempt < max_retries else "不再重试"
+        print(f"WARNING: {service_name} API 请求异常: {error}，第 {attempt}/{max_retries} 次尝试失败，{action}")
+
+    @staticmethod
     def _split_batches(diffs, max_chars=None):
         if max_chars is None:
             max_chars = AIClientBase.MAX_DIFF_CHARS
@@ -133,16 +143,16 @@ class OpenAIClient(AIClientBase):
                 last_error = e
                 status_code = e.response.status_code if e.response is not None else None
                 retry_after = int(e.response.headers.get("Retry-After", 0) or 0) if e.response is not None else 0
-                print(f"WARNING: OpenAI API 请求失败（HTTP {status_code}），第 {attempt}/{max_retries} 次重试...")
+                self._log_http_failure("OpenAI", status_code, attempt, max_retries)
                 if attempt < max_retries:
                     time.sleep(retry_after if status_code == 429 and retry_after > 0 else self.RETRY_DELAY)
             except Exception as e:
                 last_error = e
-                print(f"WARNING: OpenAI API 请求异常: {e}，第 {attempt}/{max_retries} 次重试...")
+                self._log_exception_failure("OpenAI", e, attempt, max_retries)
                 if attempt < max_retries:
                     time.sleep(self.RETRY_DELAY)
 
-        print(f"ERROR: OpenAI API 调用失败，已重试 {max_retries} 次: {last_error}")
+        print(f"ERROR: OpenAI API 调用失败，已尝试 {max_retries} 次: {last_error}")
         sys.exit(1)
 
 
@@ -183,16 +193,16 @@ class DashScopeClient(AIClientBase):
                 last_error = e
                 status_code = e.response.status_code if e.response is not None else None
                 retry_after = int(e.response.headers.get("Retry-After", 0) or 0) if e.response is not None else 0
-                print(f"WARNING: DashScope API 请求失败（HTTP {status_code}），第 {attempt}/{max_retries} 次重试...")
+                self._log_http_failure("DashScope", status_code, attempt, max_retries)
                 if attempt < max_retries:
                     time.sleep(retry_after if status_code == 429 and retry_after > 0 else self.RETRY_DELAY)
             except Exception as e:
                 last_error = e
-                print(f"WARNING: DashScope API 请求异常: {e}，第 {attempt}/{max_retries} 次重试...")
+                self._log_exception_failure("DashScope", e, attempt, max_retries)
                 if attempt < max_retries:
                     time.sleep(self.RETRY_DELAY)
 
-        print(f"ERROR: DashScope API 调用失败，已重试 {max_retries} 次: {last_error}")
+        print(f"ERROR: DashScope API 调用失败，已尝试 {max_retries} 次: {last_error}")
         sys.exit(1)
 
 
@@ -233,16 +243,16 @@ class ZhipuAIClient(AIClientBase):
                 last_error = e
                 status_code = e.response.status_code if e.response is not None else None
                 retry_after = int(e.response.headers.get("Retry-After", 0) or 0) if e.response is not None else 0
-                print(f"WARNING: Zhipu API 请求失败（HTTP {status_code}），第 {attempt}/{max_retries} 次重试...")
+                self._log_http_failure("Zhipu", status_code, attempt, max_retries)
                 if attempt < max_retries:
                     time.sleep(retry_after if status_code == 429 and retry_after > 0 else self.RETRY_DELAY)
             except Exception as e:
                 last_error = e
-                print(f"WARNING: Zhipu API 请求异常: {e}，第 {attempt}/{max_retries} 次重试...")
+                self._log_exception_failure("Zhipu", e, attempt, max_retries)
                 if attempt < max_retries:
                     time.sleep(self.RETRY_DELAY)
 
-        print(f"ERROR: Zhipu API 调用失败，已重试 {max_retries} 次: {last_error}")
+        print(f"ERROR: Zhipu API 调用失败，已尝试 {max_retries} 次: {last_error}")
         sys.exit(1)
 
 
