@@ -9,6 +9,9 @@ from core.comment_writer import MRDiscussionWriter, ReviewResultParser, parse_lo
 class ImproveAgent(BaseAgent):
     """代码改进建议 Agent：只提 non_blocking 建议，不阻断"""
 
+    def include_source_context(self) -> bool:
+        return False
+
     def prepare_data(self):
         if not self.diffs:
             print("INFO: 无代码变更，跳过 improve")

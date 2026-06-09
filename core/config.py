@@ -9,8 +9,8 @@ class Config:
     """配置管理：从环境变量读取所有配置"""
 
     DEFAULT_SCORE_THRESHOLD = 7
-    DEFAULT_AI_REQUEST_TIMEOUT = 600
-    DEFAULT_AI_MAX_RETRIES = 3
+    DEFAULT_AI_REQUEST_TIMEOUT = 300
+    DEFAULT_AI_MAX_RETRIES = 1
 
     def __init__(self):
         self.GITLAB_URL = os.environ["CI_SERVER_URL"] + "/api/v4"

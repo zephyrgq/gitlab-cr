@@ -19,8 +19,12 @@ class BaseAgent:
             review_scope=getattr(config, 'REVIEW_SCOPE', 'full'),
             repo_root=config.REPO_ROOT,
             max_context_chars=config.MAX_CONTEXT_CHARS,
+            include_source_context=self.include_source_context(),
         ).fetch()
         self.llm = create_ai_client(config)
+
+    def include_source_context(self) -> bool:
+        return True
 
     def run(self):
         """Agent 主流程"""

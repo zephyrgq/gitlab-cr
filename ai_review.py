@@ -3,7 +3,8 @@
 gitlab-cr 并行编排器
 
 用户 CI 调用的入口（python3 /home/ytyfsu/apps/ai_review.py）。
-并行执行 review / describe / improve 三个 Agent，review 结果决定 CI 是否通过。
+默认并行执行 review / describe / improve 三个 Agent，review 结果决定 CI 是否通过。
+可通过 AI_REVIEW_AGENTS 调整执行范围。
 
 要求：gitlab-cr 项目已部署在 GITLAB_CR_DIR 路径下。
 """
@@ -14,6 +15,8 @@ import sys
 import threading
 
 GITLAB_CR_DIR = os.environ.get("GITLAB_CR_DIR", "/home/ytyfsu/apps/scm-cr")
+DEFAULT_AGENT_NAMES = ["review", "describe", "improve"]
+VALID_AGENT_NAMES = {"review", "describe", "improve"}
 
 
 def _parse_positive_int(env_name: str, default: int) -> int:
@@ -32,7 +35,7 @@ def _parse_positive_int(env_name: str, default: int) -> int:
 
 def _get_agent_timeout_seconds() -> int:
     request_timeout = _parse_positive_int("AI_REQUEST_TIMEOUT_SECONDS", 600)
-    max_retries = _parse_positive_int("AI_MAX_RETRIES", 3)
+    max_retries = _parse_positive_int("AI_MAX_RETRIES", 1)
     default_timeout = request_timeout * max_retries + 300
     return _parse_positive_int("AI_AGENT_TIMEOUT_SECONDS", default_timeout)
 
@@ -45,6 +48,27 @@ def _ensure_text(value) -> str:
     if value is None:
         return ""
     return str(value)
+
+
+def _get_agent_names():
+    raw = os.environ.get("AI_REVIEW_AGENTS", "").strip()
+    if not raw:
+        return DEFAULT_AGENT_NAMES
+
+    names = []
+    for item in raw.split(","):
+        name = item.strip().lower()
+        if not name:
+            continue
+        if name not in VALID_AGENT_NAMES:
+            print("WARNING: 忽略未知 Agent: %s" % name)
+            continue
+        if name not in names:
+            names.append(name)
+
+    if "review" not in names:
+        names.insert(0, "review")
+    return names or DEFAULT_AGENT_NAMES
 
 
 def run_agent(agent_name: str, results: dict):
@@ -80,9 +104,11 @@ def run_agent(agent_name: str, results: dict):
 
 
 def main():
-    agent_names = ["review", "describe", "improve"]
+    agent_names = _get_agent_names()
     threads = []
     results = {}
+
+    print("INFO: 本次执行 Agent: %s" % ", ".join(agent_names))
 
     for name in agent_names:
         t = threading.Thread(target=run_agent, args=(name, results))

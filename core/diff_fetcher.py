@@ -22,9 +22,9 @@ BINARY_EXTENSIONS = {
 }
 
 HUNK_PATTERN = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@", re.MULTILINE)
-CONTEXT_PADDING = 20
-MAX_LINES_PER_FILE = 160
-MAX_FILES = 12
+DEFAULT_CONTEXT_PADDING = 8
+DEFAULT_MAX_LINES_PER_FILE = 80
+DEFAULT_MAX_CONTEXT_FILES = 8
 
 
 class DiffFetcher:
@@ -32,13 +32,31 @@ class DiffFetcher:
 
     def __init__(self, gitlab_url: str, token: str, project_id: str, mr_iid: str,
                  review_scope: str = "full", repo_root: Optional[str] = None,
-                 max_context_chars: int = 2000):
+                 max_context_chars: int = 2000, include_source_context: bool = True):
         self.api = GitLabAPI(gitlab_url, token)
         self.project_id = project_id
         self.mr_iid = mr_iid
         self.review_scope = review_scope
         self.repo_root = Path(repo_root or os.environ.get("CI_PROJECT_DIR", os.getcwd()))
         self.max_context_chars = max_context_chars
+        self.include_source_context = include_source_context
+        self.context_padding = self._parse_positive_int("AI_SOURCE_CONTEXT_PADDING", DEFAULT_CONTEXT_PADDING)
+        self.max_lines_per_file = self._parse_positive_int("AI_SOURCE_CONTEXT_LINES_PER_FILE", DEFAULT_MAX_LINES_PER_FILE)
+        self.max_context_files = self._parse_positive_int("AI_SOURCE_CONTEXT_FILES", DEFAULT_MAX_CONTEXT_FILES)
+
+    @staticmethod
+    def _parse_positive_int(env_name: str, default: int) -> int:
+        raw = os.environ.get(env_name, "").strip()
+        if not raw:
+            return default
+        try:
+            value = int(raw)
+            if value > 0:
+                return value
+        except ValueError:
+            pass
+        print(f"WARNING: {env_name}={raw!r} 无效，使用默认值 {default}")
+        return default
 
     @staticmethod
     def _should_include(diff_entry: dict) -> bool:
@@ -144,11 +162,12 @@ class DiffFetcher:
         if not diffs:
             return diffs
 
-        for entry in diffs[:MAX_FILES]:
+        for index, entry in enumerate(diffs):
             added, removed = self._count_changed_lines(entry.get("diff", ""))
             entry["added_lines"] = added
             entry["removed_lines"] = removed
-            entry["source_context"] = self._build_file_context(entry)
+            if self.include_source_context and index < self.max_context_files:
+                entry["source_context"] = self._build_file_context(entry)
 
         return diffs
 
@@ -184,16 +203,16 @@ class DiffFetcher:
         if not ranges:
             if not lines:
                 return None
-            ranges = [(1, min(len(lines), MAX_LINES_PER_FILE))]
+            ranges = [(1, min(len(lines), self.max_lines_per_file))]
 
         snippets = []
         consumed = 0
         for start, end in ranges:
             snippet_count = end - start + 1
-            if consumed >= MAX_LINES_PER_FILE:
+            if consumed >= self.max_lines_per_file:
                 break
-            if consumed + snippet_count > MAX_LINES_PER_FILE:
-                end = start + (MAX_LINES_PER_FILE - consumed) - 1
+            if consumed + snippet_count > self.max_lines_per_file:
+                end = start + (self.max_lines_per_file - consumed) - 1
             snippets.append(self._format_snippet(lines, start, end))
             consumed += snippet_count
 
@@ -207,8 +226,8 @@ class DiffFetcher:
             if count == 0:
                 count = 1
             end = start + count - 1
-            padded_start = max(1, start - CONTEXT_PADDING)
-            padded_end = min(total_lines, end + CONTEXT_PADDING)
+            padded_start = max(1, start - self.context_padding)
+            padded_end = min(total_lines, end + self.context_padding)
             ranges.append((padded_start, padded_end))
         return self._merge_ranges(ranges)
 

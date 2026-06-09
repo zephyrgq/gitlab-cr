@@ -1,7 +1,6 @@
 """Describe Agent：自动生成 MR 描述"""
 
 import json
-import sys
 from pathlib import Path
 
 from agents.base import BaseAgent
@@ -10,12 +9,14 @@ from agents.base import BaseAgent
 class DescribeAgent(BaseAgent):
     """自动生成 MR 标题和描述"""
 
+    def include_source_context(self) -> bool:
+        return False
+
     def prepare_data(self):
         if not self.diffs:
             print("INFO: 无代码变更，跳过 describe")
             return {"diffs": [], "context": ""}
 
-        # 获取 MR 当前标题作为参考
         mr_title = ""
         try:
             url = f"/projects/{self.config.PROJECT_ID}/merge_requests/{self.config.MR_IID}"
@@ -61,7 +62,6 @@ class DescribeAgent(BaseAgent):
                 current_desc = mr.get("description", "") or ""
             except Exception:
                 pass
-            # 在原有描述前添加 AI 生成的描述
             update_data["description"] = f"> 🤖 AI 自动生成\n\n{description}\n\n---\n\n{current_desc}"
 
         try:
