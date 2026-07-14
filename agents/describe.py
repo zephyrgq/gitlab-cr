@@ -43,16 +43,13 @@ class DescribeAgent(BaseAgent):
         if not parsed or not self.diffs:
             return
 
-        title = parsed.get("title", "")
         description = parsed.get("description", "")
 
-        if not title and not description:
+        if not description:
             print("INFO: describe 未生成有效内容，跳过")
             return
 
         update_data = {}
-        if title:
-            update_data["title"] = title
         if description:
             current_desc = ""
             try:

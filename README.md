@@ -38,7 +38,7 @@ gitlab-cr/
 | `DASHSCOPE_API_KEY`                | ✅   | -                                                  | 阿里百炼 API Key                       |
 | `AI_SERVICE`                       |      | dashscope                                          | openai / dashscope / zhipu             |
 | `AI_REVIEW_SCORE_THRESHOLD`        |      | 7                                                  | 1-10，低于此值阻止合并                 |
-| `AI_REQUEST_TIMEOUT_SECONDS`       |      | 480                                                | 单次 LLM HTTP 请求超时（秒）           |
+| `AI_REQUEST_TIMEOUT_SECONDS`       |      | 600                                                | 单次 LLM HTTP 请求超时（秒）           |
 | `AI_MAX_RETRIES`                   |      | 1                                                  | LLM 请求最大重试次数                   |
 | `AI_AGENT_TIMEOUT_SECONDS`         |      | `AI_REQUEST_TIMEOUT_SECONDS * AI_MAX_RETRIES + 60` | 单个 Agent 进程总超时（秒）            |
 | `AI_REVIEW_AGENTS`                 |      | `review,describe,improve`                          | CI 执行的 Agent，逗号分隔；如 `review` |
@@ -85,7 +85,7 @@ python main.py improve
 | describe | 自动生成 MR 标题和描述   | 否   | `main.py describe` |
 | improve  | 代码质量改进建议         | 否   | `main.py improve`  |
 
-CI 默认并行运行 `review`、`describe` 和 `improve`。如果只想运行阻断合并所必需的审查，设置 `AI_REVIEW_AGENTS=review`。
+CI 默认并行运行 `review`、`describe` 和 `improve`。`review` 会先执行精简评分，再执行详细审查；如果详细审查长输出超时，会使用已获取的精简评分继续执行门禁。如果只想运行阻断合并所必需的审查，设置 `AI_REVIEW_AGENTS=review`。
 
 ## 配置
 

@@ -35,6 +35,25 @@ def _extract_dimension_scores(raw: str):
 class ReviewAgent(BaseAgent):
     """代码审查 Agent：基于结构化 prompt 一次完成安全+逻辑+质量审查"""
 
+    def run(self):
+        """先获取精简评分，再获取详细审查，避免长输出超时导致评分缺失。"""
+        data = self.prepare_data()
+        score_result = self.llm.review(self.build_score_prompt(), data["context"], data["diffs"])
+        score_parsed = self.parse(score_result)
+        score = score_parsed.get("score", 0)
+        print("INFO: 预评分: %s/10" % score)
+
+        try:
+            detail_result = self.llm.review(self.build_prompt(), data["context"], data["diffs"])
+            parsed = self.parse(detail_result)
+            detail_score = parsed.get("score", score)
+            parsed["score"] = min(score, detail_score)
+        except SystemExit:
+            print("WARNING: 详细审查输出失败，使用预评分结果继续执行门禁")
+            parsed = score_parsed
+
+        self.execute(parsed)
+
     def prepare_data(self):
         if not self.diffs:
             print("INFO: 无代码变更，跳过审查")
@@ -60,6 +79,10 @@ class ReviewAgent(BaseAgent):
 
     def build_prompt(self):
         prompt_path = Path(__file__).parent.parent / "prompts" / "review.md"
+        return prompt_path.read_text(encoding="utf-8")
+
+    def build_score_prompt(self):
+        prompt_path = Path(__file__).parent.parent / "prompts" / "review_score.md"
         return prompt_path.read_text(encoding="utf-8")
 
     def parse(self, result: str):
