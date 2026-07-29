@@ -21,7 +21,7 @@
 "location": "文件路径:行号",
 "description": "改进建议的描述",
 "suggestion": "具体的改进方式",
-"severity": "suggestion"
+"severity": "S2"
 }
 ],
 "other_suggestions": ["可选优化建议"],

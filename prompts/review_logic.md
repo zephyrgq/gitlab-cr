@@ -51,7 +51,7 @@
             "location": "文件路径:行号",
             "description": "问题描述",
             "suggestion": "修复建议",
-            "severity": "critical"
+            "severity": "S0"
         }
     ],
     "non_blocking_issues": [
@@ -60,7 +60,7 @@
             "location": "文件路径:行号",
             "description": "问题描述",
             "suggestion": "修复建议",
-            "severity": "warning"
+            "severity": "S1"
         }
     ],
     "other_suggestions": [],
@@ -68,7 +68,7 @@
 }
 
 评分规则：
-- 发现 blocking 问题 → 1-3 分
-- 发现 warning 级别问题 → 4-6 分
-- 只有 minor 建议 → 7-9 分
+- 发现 S0 问题 → 1-3 分
+- 发现 S1 级别问题 → 4-6 分
+- 只有 S2 建议 → 7-9 分
 - 未发现逻辑问题 → 10 分

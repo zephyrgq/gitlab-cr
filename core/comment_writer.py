@@ -76,10 +76,10 @@ class ReviewResultParser:
             return result
         result["summary"] = str(payload.get("summary") or "").strip()
         result["blocking_issues"] = cls._normalize_issue_list(
-            payload.get("blocking_issues") or [], default_severity="critical"
+            payload.get("blocking_issues") or [], default_severity="S0"
         )
         result["non_blocking_issues"] = cls._normalize_issue_list(
-            payload.get("non_blocking_issues") or [], default_severity="warning"
+            payload.get("non_blocking_issues") or [], default_severity="S1"
         )
         suggestions = payload.get("other_suggestions") or []
         if isinstance(suggestions, list):
@@ -138,6 +138,21 @@ class ScoreParser:
             val = max(1, min(10, val))
             scores.append(val)
         return min(scores)
+
+
+SEVERITY_COLORS = {
+    "S0": "#d73a4a",  # 红色：阻断
+    "S1": "#e36209",  # 橙色：警告
+    "S2": "#0366d6",  # 蓝色：建议
+    "S3": "#28a745",  # 绿色：安全
+}
+
+
+def _severity_badge(severity: str) -> str:
+    """生成带颜色的 severity 标签"""
+    s = (severity or "").strip().upper()
+    color = SEVERITY_COLORS.get(s, "#6a737d")
+    return f'<span style="color:{color}">[{s}]</span>'
 
 
 def truncate_text(text: str, max_chars: int, suffix: str = "\n...(truncated)") -> str:
@@ -232,7 +247,7 @@ class MRDiscussionWriter:
 
     @staticmethod
     def _format_body(severity: str, title: str, description: str = "", suggestion: str = "", location: str = ""):
-        body_parts = [f"**[{severity.upper()}]** {title}"]
+        body_parts = [f"**{_severity_badge(severity)}** {title}"]
         if location:
             body_parts.append(f"> 位置: {location}")
         if description:
@@ -371,7 +386,7 @@ class MRCommentWriter:
 
     @classmethod
     def _issue_signature(cls, issue):
-        severity = cls._canonicalize_text(issue.get("severity") or "warning")
+        severity = cls._canonicalize_text(issue.get("severity") or "S1")
         location = cls._normalize_issue_location(issue.get("location") or "")
         title = cls._canonicalize_text(issue.get("title") or "")
         description = cls._canonicalize_text(issue.get("description") or "")
@@ -453,8 +468,8 @@ class MRCommentWriter:
             location = issue.get("location") or "未知位置"
             description = issue.get("description") or ""
             suggestion = issue.get("suggestion") or ""
-            severity = issue.get("severity") or "warning"
-            lines.append(f"{prefix} [{severity}] {title}")
+            severity = issue.get("severity") or "S1"
+            lines.append(f"{prefix} {_severity_badge(severity)} {title}")
             lines.append(f"  - 位置: {location}")
             if description:
                 lines.append(f"  - 问题: {description}")

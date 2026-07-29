@@ -115,7 +115,7 @@ class ReviewAgent(BaseAgent):
                 try:
                     discussion_writer.post_comment(
                         self.config.MR_IID, file_path, line,
-                        issue.get("severity", "critical"),
+                        issue.get("severity", "S0"),
                         issue["title"],
                         issue.get("description", ""),
                         issue.get("suggestion", ""),
@@ -129,7 +129,7 @@ class ReviewAgent(BaseAgent):
                 try:
                     discussion_writer.post_comment(
                         self.config.MR_IID, file_path, line,
-                        issue.get("severity", "warning"),
+                        issue.get("severity", "S1"),
                         issue["title"],
                         issue.get("description", ""),
                         issue.get("suggestion", ""),

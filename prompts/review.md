@@ -54,15 +54,15 @@
 {
 "summary": "综合审查总结",
 "security": {
-"issues": [{"title": "", "location": "文件路径:行号", "description": "", "suggestion": "", "severity": "critical"}],
+"issues": [{"title": "", "location": "文件路径:行号", "description": "", "suggestion": "", "severity": "S0"}],
 "score": 10
 },
 "logic": {
-"issues": [{"title": "", "location": "文件路径:行号", "description": "", "suggestion": "", "severity": "critical"}],
+"issues": [{"title": "", "location": "文件路径:行号", "description": "", "suggestion": "", "severity": "S0"}],
 "score": 10
 },
 "quality": {
-"issues": [{"title": "", "location": "文件路径:行号", "description": "", "suggestion": "", "severity": "warning"}],
+"issues": [{"title": "", "location": "文件路径:行号", "description": "", "suggestion": "", "severity": "S1"}],
 "score": 10
 },
 "blocking_issues": [],
@@ -73,8 +73,8 @@
 
 要求：
 
-- blocking_issues = 所有 severity 为 "critical" 的 issue
-- non_blocking_issues = 所有 severity 为 "warning" 的 issue
+- blocking_issues = 所有 severity 为 "S0" 的 issue
+- non_blocking_issues = 所有 severity 为 "S1" 或 "S2" 的 issue
 - other_suggestions = 质量维度的优化建议
 - score = min(security.score, logic.score, quality.score)
 - 没有问题时 issues 返回空数组

@@ -66,7 +66,7 @@
             "location": "文件路径:行号",
             "description": "问题描述",
             "suggestion": "改进方式",
-            "severity": "warning"
+            "severity": "S1"
         }
     ],
     "other_suggestions": ["可选优化建议"],

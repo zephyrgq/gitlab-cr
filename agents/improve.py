@@ -44,7 +44,7 @@ class ImproveAgent(BaseAgent):
                 try:
                     discussion_writer.post_comment(
                         self.config.MR_IID, file_path, line,
-                        issue.get("severity", "suggestion"),
+                        issue.get("severity", "S2"),
                         issue["title"],
                         issue.get("description", ""),
                         issue.get("suggestion", ""),
