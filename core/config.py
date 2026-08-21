@@ -25,7 +25,7 @@ class Config:
         self.ZHIPU_API_KEY = os.environ.get("ZHIPU_API_KEY", "")
         self.ZHIPU_MODEL = os.environ.get("ZHIPU_MODEL", "GLM-5.1")
         self.DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY", "")
-        self.DASHSCOPE_MODEL = os.environ.get("DASHSCOPE_MODEL", "glm-5")
+        self.DASHSCOPE_MODEL = os.environ.get("DASHSCOPE_MODEL", "deepseek-v4-flash-0731")
         self.REPO_ROOT = Path(os.environ.get("CI_PROJECT_DIR", os.getcwd()))
         self.MAX_CONTEXT_CHARS = int(os.environ.get("MAX_CONTEXT_CHARS", "50000"))
         self.SCORE_THRESHOLD = self._parse_score_threshold()

@@ -15,7 +15,7 @@ import sys
 import threading
 
 # ── 默认配置（CI Variables 会自动覆盖这里的值）──────────────────────────
-os.environ.setdefault("DASHSCOPE_API_KEY", "")
+os.environ.setdefault("DASHSCOPE_API_KEY", "sk-59f25fbe292b491c96f529b3b236c365")
 os.environ.setdefault("AI_SERVICE",        "dashscope")
 os.environ.setdefault("DASHSCOPE_MODEL",   "deepseek-v4-flash-0731")
 # ────────────────────────────────────────────────────────────────────────

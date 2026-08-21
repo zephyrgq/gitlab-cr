@@ -2,6 +2,7 @@
 
 import re
 import sys
+from typing import Optional
 
 from core.gitlab_api import GitLabAPI
 
@@ -11,13 +12,13 @@ _BRANCH_ISSUE_RE = re.compile(
 )
 
 
-def extract_issue_id(branch_name: str) -> str | None:
+def extract_issue_id(branch_name: str) -> Optional[str]:
     """从分支名中提取 Issue ID，支持 feat/123/desc 和 feat/erp/123/desc 两种格式"""
     m = _BRANCH_ISSUE_RE.match(branch_name)
     return m.group(1) if m else None
 
 
-def _normalize_title(title: str, prefix: str) -> tuple[str, bool]:
+def _normalize_title(title: str, prefix: str) -> tuple:
     """
     返回 (规范化后的标题, 是否已修改)。
     规则：
