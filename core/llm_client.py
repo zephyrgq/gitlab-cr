@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """多模型 LLM 客户端，支持 OpenAI / DashScope / Zhipu"""
 
+import json
 import os
 import sys
 import time
@@ -13,7 +14,30 @@ class AIClientBase:
     """AI 客户端基类，定义共同的接口和共享逻辑"""
 
     RETRY_DELAY = 5
+    MAX_RETRY_DELAY = 60
     MAX_DIFF_CHARS = 150000
+    RETRYABLE_HTTP_STATUSES = {429, 500, 502, 503, 504}
+
+    @classmethod
+    def _parse_retry_after(cls, value):
+        """从 Retry-After 响应头解析秒数；无法解析时返回 None。"""
+        if value is None:
+            return None
+        text = str(value).strip()
+        if text.isdigit():
+            return int(text)
+        return None
+
+    def _get_retry_delay(self, status_code, attempt, response=None):
+        """计算重试等待时间：429 优先使用服务端 Retry-After，否则指数退避。"""
+        if response is not None and status_code == 429:
+            retry_after = self._parse_retry_after(response.headers.get("Retry-After"))
+            if retry_after is not None and retry_after > 0:
+                return min(retry_after, self.MAX_RETRY_DELAY)
+
+        if status_code in self.RETRYABLE_HTTP_STATUSES:
+            return min(self.RETRY_DELAY * (2 ** (attempt - 1)), self.MAX_RETRY_DELAY)
+        return self.RETRY_DELAY
 
     def _get_max_retries(self):
         return getattr(self.config, "AI_MAX_RETRIES", 3)
@@ -30,6 +54,27 @@ class AIClientBase:
     def _log_exception_failure(service_name, error, attempt, max_retries):
         action = "准备重试" if attempt < max_retries else "不再重试"
         print(f"WARNING: {service_name} API 请求异常: {error}，第 {attempt}/{max_retries} 次尝试失败，{action}")
+
+    @staticmethod
+    def _read_sse_stream(resp) -> str:
+        """解析 OpenAI 兼容的 SSE 流，打印进度点，返回完整内容。"""
+        chunks = []
+        for raw in resp.iter_lines():
+            line = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else raw
+            if not line.startswith("data: "):
+                continue
+            payload = line[6:]
+            if payload == "[DONE]":
+                break
+            try:
+                delta = json.loads(payload)["choices"][0]["delta"].get("content", "")
+            except Exception:
+                continue
+            if delta:
+                chunks.append(delta)
+                print(".", end="", flush=True)
+        print()  # 换行
+        return "".join(chunks)
 
     @staticmethod
     def _split_batches(diffs, max_chars=None):
@@ -123,7 +168,7 @@ class OpenAIClient(AIClientBase):
                         {"role": "user", "content": user_content},
                     ],
                     "temperature": 0.2,
-                    "stream": False,
+                    "stream": True,
                 }
                 session = requests.Session()
                 session.verify = False
@@ -134,18 +179,18 @@ class OpenAIClient(AIClientBase):
                     json=payload,
                     timeout=request_timeout,
                     proxies=proxies,
+                    stream=True,
                 )
                 resp.raise_for_status()
-                data = resp.json()
-                return data["choices"][0]["message"]["content"]
+                return self._read_sse_stream(resp)
 
             except requests.exceptions.HTTPError as e:
                 last_error = e
                 status_code = e.response.status_code if e.response is not None else None
-                retry_after = int(e.response.headers.get("Retry-After", 0) or 0) if e.response is not None else 0
                 self._log_http_failure("OpenAI", status_code, attempt, max_retries)
                 if attempt < max_retries:
-                    time.sleep(retry_after if status_code == 429 and retry_after > 0 else self.RETRY_DELAY)
+                    delay = self._get_retry_delay(status_code, attempt, e.response)
+                    time.sleep(delay)
             except Exception as e:
                 last_error = e
                 self._log_exception_failure("OpenAI", e, attempt, max_retries)
@@ -177,25 +222,25 @@ class DashScopeClient(AIClientBase):
                         {"role": "user", "content": user_content},
                     ],
                     "temperature": 0.2,
-                    "stream": False,
+                    "stream": True,
                 }
                 resp = requests.post(
                     "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
                     headers=headers,
                     json=payload,
                     timeout=request_timeout,
+                    stream=True,
                 )
                 resp.raise_for_status()
-                data = resp.json()
-                return data["choices"][0]["message"]["content"]
+                return self._read_sse_stream(resp)
 
             except requests.exceptions.HTTPError as e:
                 last_error = e
                 status_code = e.response.status_code if e.response is not None else None
-                retry_after = int(e.response.headers.get("Retry-After", 0) or 0) if e.response is not None else 0
                 self._log_http_failure("DashScope", status_code, attempt, max_retries)
                 if attempt < max_retries:
-                    time.sleep(retry_after if status_code == 429 and retry_after > 0 else self.RETRY_DELAY)
+                    delay = self._get_retry_delay(status_code, attempt, e.response)
+                    time.sleep(delay)
             except Exception as e:
                 last_error = e
                 self._log_exception_failure("DashScope", e, attempt, max_retries)
@@ -227,25 +272,25 @@ class ZhipuAIClient(AIClientBase):
                         {"role": "user", "content": user_content},
                     ],
                     "temperature": 0.2,
-                    "stream": False,
+                    "stream": True,
                 }
                 resp = requests.post(
                     "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
                     headers=headers,
                     json=payload,
                     timeout=request_timeout,
+                    stream=True,
                 )
                 resp.raise_for_status()
-                data = resp.json()
-                return data["choices"][0]["message"]["content"]
+                return self._read_sse_stream(resp)
 
             except requests.exceptions.HTTPError as e:
                 last_error = e
                 status_code = e.response.status_code if e.response is not None else None
-                retry_after = int(e.response.headers.get("Retry-After", 0) or 0) if e.response is not None else 0
                 self._log_http_failure("Zhipu", status_code, attempt, max_retries)
                 if attempt < max_retries:
-                    time.sleep(retry_after if status_code == 429 and retry_after > 0 else self.RETRY_DELAY)
+                    delay = self._get_retry_delay(status_code, attempt, e.response)
+                    time.sleep(delay)
             except Exception as e:
                 last_error = e
                 self._log_exception_failure("Zhipu", e, attempt, max_retries)

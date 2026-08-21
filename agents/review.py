@@ -36,7 +36,10 @@ class ReviewAgent(BaseAgent):
     """代码审查 Agent：基于结构化 prompt 一次完成安全+逻辑+质量审查"""
 
     def run(self):
-        """先获取精简评分，再获取详细审查，避免长输出超时导致评分缺失。"""
+        """先执行标题检查，再获取精简评分，最后获取详细审查。"""
+        from agents.title_checker import TitleCheckerAgent
+        TitleCheckerAgent(self.config).run()
+
         data = self.prepare_data()
         score_result = self.llm.review(self.build_score_prompt(), data["context"], data["diffs"])
         score_parsed = self.parse(score_result)

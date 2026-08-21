@@ -10,7 +10,7 @@ class Config:
 
     DEFAULT_SCORE_THRESHOLD = 7
     DEFAULT_AI_REQUEST_TIMEOUT = 600
-    DEFAULT_AI_MAX_RETRIES = 1
+    DEFAULT_AI_MAX_RETRIES = 3
 
     def __init__(self):
         self.GITLAB_URL = os.environ["CI_SERVER_URL"] + "/api/v4"
@@ -18,6 +18,7 @@ class Config:
         self.PROJECT_ID = os.environ["CI_PROJECT_ID"]
         self.MR_IID = os.environ["CI_MERGE_REQUEST_IID"]
         self.SOURCE_BRANCH = os.environ["CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"]
+        self.PROJECT_NAME = os.environ.get("PROJECT_NAME", "")
         self.OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
         self.OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
         self.OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
@@ -41,7 +42,7 @@ class Config:
         self.OPENAI_PROXIES_FALLBACK = {"http": fallback, "https": fallback} if fallback else None
 
     @classmethod
-    def from_env(cls) -> "Config":
+    def from_env(cls, action: str = "") -> "Config":
         """从环境变量读取配置，验证必需变量"""
         required_vars = {
             "GITLAB_TOKEN": "GITLAB_TOKEN",
@@ -55,6 +56,13 @@ class Config:
         if missing:
             print(f"ERROR: 缺少必需的环境变量: {', '.join(missing)}")
             sys.exit(1)
+
+        # check-title 只需要 GitLab token 和 PROJECT_NAME，不需要 AI Key
+        if action == "check-title":
+            if not os.environ.get("PROJECT_NAME"):
+                print("ERROR: check-title 需要设置 PROJECT_NAME 环境变量")
+                sys.exit(1)
+            return cls()
 
         # 验证 AI 服务所需的 API Key
         ai_service = os.environ.get("AI_SERVICE", "dashscope")

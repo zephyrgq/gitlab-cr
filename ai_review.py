@@ -14,8 +14,16 @@ import subprocess
 import sys
 import threading
 
+# ── 默认配置（CI Variables 会自动覆盖这里的值）──────────────────────────
+os.environ.setdefault("DASHSCOPE_API_KEY", "")
+os.environ.setdefault("AI_SERVICE",        "dashscope")
+os.environ.setdefault("DASHSCOPE_MODEL",   "deepseek-v4-flash-0731")
+# ────────────────────────────────────────────────────────────────────────
+
 GITLAB_CR_DIR = os.environ.get("GITLAB_CR_DIR", "/home/ytyfsu/apps/scm-cr")
 DEFAULT_AGENT_NAMES = ["review", "describe", "improve"]
+DEFAULT_AI_REQUEST_TIMEOUT_SECONDS = 600
+DEFAULT_AI_MAX_RETRIES = 3
 VALID_AGENT_NAMES = {"review", "describe", "improve"}
 
 
@@ -34,9 +42,12 @@ def _parse_positive_int(env_name: str, default: int) -> int:
 
 
 def _get_agent_timeout_seconds() -> int:
-    request_timeout = _parse_positive_int("AI_REQUEST_TIMEOUT_SECONDS", 600)
-    max_retries = _parse_positive_int("AI_MAX_RETRIES", 1)
-    default_timeout = request_timeout * max_retries + 60
+    request_timeout = _parse_positive_int(
+        "AI_REQUEST_TIMEOUT_SECONDS", DEFAULT_AI_REQUEST_TIMEOUT_SECONDS
+    )
+    max_retries = _parse_positive_int("AI_MAX_RETRIES", DEFAULT_AI_MAX_RETRIES)
+    # review 会先预评分、再详细审查，因此预留两次 LLM 调用的超时预算。
+    default_timeout = request_timeout * max_retries * 2 + 60
     return _parse_positive_int("AI_AGENT_TIMEOUT_SECONDS", default_timeout)
 
 

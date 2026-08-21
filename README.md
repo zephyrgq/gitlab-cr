@@ -39,8 +39,8 @@ gitlab-cr/
 | `AI_SERVICE`                       |      | dashscope                                          | openai / dashscope / zhipu             |
 | `AI_REVIEW_SCORE_THRESHOLD`        |      | 7                                                  | 1-10，低于此值阻止合并                 |
 | `AI_REQUEST_TIMEOUT_SECONDS`       |      | 600                                                | 单次 LLM HTTP 请求超时（秒）           |
-| `AI_MAX_RETRIES`                   |      | 1                                                  | LLM 请求最大重试次数                   |
-| `AI_AGENT_TIMEOUT_SECONDS`         |      | `AI_REQUEST_TIMEOUT_SECONDS * AI_MAX_RETRIES + 60` | 单个 Agent 进程总超时（秒）            |
+| `AI_MAX_RETRIES`                   |      | 3                                                  | LLM 请求最大重试次数                   |
+| `AI_AGENT_TIMEOUT_SECONDS`         |      | `AI_REQUEST_TIMEOUT_SECONDS * AI_MAX_RETRIES * 2 + 60` | 单个 Agent 进程总超时（秒，review 预留两次调用） |
 | `AI_REVIEW_AGENTS`                 |      | `review,describe,improve`                          | CI 执行的 Agent，逗号分隔；如 `review` |
 | `AI_SOURCE_CONTEXT_PADDING`        |      | 8                                                  | review 源码上下文前后行数              |
 | `AI_SOURCE_CONTEXT_LINES_PER_FILE` |      | 80                                                 | 单文件最多源码上下文行数               |
